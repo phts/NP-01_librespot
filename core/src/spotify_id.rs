@@ -3,8 +3,17 @@ use extprim::u128::u128;
 use std;
 use std::fmt;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct SpotifyId(u128);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SpotifyTrackType {
+    Track,
+    Podcast,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SpotifyId {
+    pub id: u128,
+    pub track_type: SpotifyTrackType,
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct SpotifyIdError;
@@ -13,6 +22,13 @@ const BASE62_DIGITS: &'static [u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDE
 const BASE16_DIGITS: &'static [u8] = b"0123456789abcdef";
 
 impl SpotifyId {
+    fn as_track(n: u128) -> SpotifyId {
+        SpotifyId {
+            id: n.to_owned(),
+            track_type: SpotifyTrackType::Track,
+        }
+    }
+
     pub fn from_base16(id: &str) -> Result<SpotifyId, SpotifyIdError> {
         let data = id.as_bytes();
 
@@ -26,7 +42,7 @@ impl SpotifyId {
             n = n + u128::new(d);
         }
 
-        Ok(SpotifyId(n))
+        Ok(SpotifyId::as_track(n))
     }
 
     pub fn from_base62(id: &str) -> Result<SpotifyId, SpotifyIdError> {
@@ -41,8 +57,7 @@ impl SpotifyId {
             n = n * u128::new(62);
             n = n + u128::new(d);
         }
-
-        Ok(SpotifyId(n))
+        Ok(SpotifyId::as_track(n))
     }
 
     pub fn from_raw(data: &[u8]) -> Result<SpotifyId, SpotifyIdError> {
@@ -53,11 +68,22 @@ impl SpotifyId {
         let high = BigEndian::read_u64(&data[0..8]);
         let low = BigEndian::read_u64(&data[8..16]);
 
-        Ok(SpotifyId(u128::from_parts(high, low)))
+        Ok(SpotifyId::as_track(u128::from_parts(high, low)))
+    }
+
+    pub fn from_uri(uri: &str) -> Result<SpotifyId, SpotifyIdError> {
+        let parts = uri.split(":").collect::<Vec<&str>>();
+        if uri.contains(":show:") || uri.contains(":episode:") {
+            let mut spotify_id = SpotifyId::from_base62(parts[2]).unwrap();
+            spotify_id.track_type = SpotifyTrackType::Podcast;
+            Ok(spotify_id)
+        } else {
+            SpotifyId::from_base62(parts[2])
+        }
     }
 
     pub fn to_base16(&self) -> String {
-        let &SpotifyId(ref n) = self;
+        let &SpotifyId { id: ref n, .. } = self;
 
         let mut data = [0u8; 32];
         for i in 0..32 {
@@ -68,7 +94,7 @@ impl SpotifyId {
     }
 
     pub fn to_base62(&self) -> String {
-        let &SpotifyId(mut n) = self;
+        let &SpotifyId { id: mut n, .. } = self;
 
         let mut data = [0u8; 22];
         let sixty_two = u128::new(62);
@@ -81,7 +107,7 @@ impl SpotifyId {
     }
 
     pub fn to_raw(&self) -> [u8; 16] {
-        let &SpotifyId(ref n) = self;
+        let &SpotifyId { id: ref n, .. } = self;
 
         let mut data = [0u8; 16];
 
