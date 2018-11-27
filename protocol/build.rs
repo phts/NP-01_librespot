@@ -1,5 +1,5 @@
-extern crate protoc_rust;
-use protoc_rust::Customize;
+extern crate protobuf_codegen_pure;
+use protobuf_codegen_pure::Customize;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -14,12 +14,13 @@ fn main() {
     for &(path, expected_checksum) in files::FILES {
         let actual = cksum_file(path).unwrap();
         if expected_checksum != actual {
-            protoc_rust::run(protoc_rust::Args {
+            protobuf_codegen_pure::run(protobuf_codegen_pure::Args {
                 out_dir: "src",
                 input: &[path],
                 includes: &["proto"],
                 customize: Customize { ..Default::default() },
-            }).expect("protoc");
+            })
+            .expect("protoc");
             let new_checksum = cksum_file(path).unwrap();
             f_str = f_str.replace(&expected_checksum.to_string(), &new_checksum.to_string());
             changed = true;
