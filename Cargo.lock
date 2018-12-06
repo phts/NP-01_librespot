@@ -10,13 +10,13 @@ dependencies = [
 
 [[package]]
 name = "aes-ctr"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "aes-soft 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "aesni 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "ctr 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "stream-cipher 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aesni 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ctr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stream-cipher 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -36,7 +36,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "block-cipher-trait 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "opaque-debug 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "stream-cipher 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "aesni"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "block-cipher-trait 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "opaque-debug 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stream-cipher 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -254,11 +263,11 @@ dependencies = [
 
 [[package]]
 name = "ctr"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "block-cipher-trait 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "stream-cipher 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stream-cipher 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -572,7 +581,7 @@ dependencies = [
 name = "librespot-audio"
 version = "0.1.0"
 dependencies = [
- "aes-ctr 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aes-ctr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bit-set 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -590,7 +599,7 @@ dependencies = [
 name = "librespot-connect"
 version = "0.1.0"
 dependencies = [
- "aes-ctr 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "aes-ctr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "block-modes 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dns-sd 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1244,7 +1253,7 @@ dependencies = [
 
 [[package]]
 name = "stream-cipher"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "generic-array 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1690,9 +1699,10 @@ dependencies = [
 
 [metadata]
 "checksum aes 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "efc57804fcd4ac04dae62b2f6d7f33bbbb8fd400efed3e5ad6adef0dd667a9f0"
-"checksum aes-ctr 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c1423b3db67ca4d7691404b6643c01a8d40569e00eb77f24f7278223fbb1a107"
+"checksum aes-ctr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d2e5b0458ea3beae0d1d8c0f3946564f8e10f90646cf78c06b4351052058d1ee"
 "checksum aes-soft 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "acdc19c789666840bb86d1df8ee1f458418f74a6b9c8f10538fb700de5829cb8"
 "checksum aesni 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ea93ee7c249d885b395fca6181fd6416f0249b1a0a7c7a2e8bfd6b74cebd2f82"
+"checksum aesni 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2f70a6b5f971e473091ab7cfb5ffac6cde81666c4556751d8d5620ead8abf100"
 "checksum aho-corasick 0.6.8 (registry+https://github.com/rust-lang/crates.io-index)" = "68f56c7353e5a9547cbd76ed90f7bb5ffc3ba09d4ea9bd1d8c06c8b1142eeb5a"
 "checksum alsa 0.2.0 (git+https://github.com/diwic/alsa-rs.git)" = "<none>"
 "checksum alsa-sys 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b0edcbbf9ef68f15ae1b620f722180b82a98b6f0628d30baa6b8d2a5abc87d58"
@@ -1721,7 +1731,7 @@ dependencies = [
 "checksum crossbeam-utils 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "2760899e32a1d58d5abb31129f8fae5de75220bc2176e77ff7c627ae45c918d9"
 "checksum crossbeam-utils 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d636a8b3bcc1b409d7ffd3facef8f21dcb4009626adbd0c5e6c4305c07253c7b"
 "checksum crypto-mac 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4434400df11d95d556bac068ddfedd482915eb18fe8bea89bc80b6e4b1c179e5"
-"checksum ctr 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "28912c12ae9ba20d6971168379d1482a4ce17f4855f23218ffb53ddc91fbe69b"
+"checksum ctr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "044f882973b245404e90c90e7e42e8ee8d7a64edfd7adf83d684fb97e8e2c1b6"
 "checksum digest 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "05f47366984d3ad862010e22c7ce81a7dbcaebbdfb37241a620f8b6596ee135c"
 "checksum dns-parser 0.3.2 (git+https://github.com/plietar/dns-parser)" = "<none>"
 "checksum dns-sd 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d748509dea20228f63ba519bf142ce2593396386125b01f5b0d6412dab972087"
@@ -1823,7 +1833,7 @@ dependencies = [
 "checksum slab 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fdeff4cd9ecff59ec7e3744cbca73dfe5ac35c2aedb2cfba8a1c715a18912e9d"
 "checksum smallvec 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4c8cbcd6df1e117c2210e13ab5109635ad68a929fcbb8964dc965b76cb5ee013"
 "checksum socket2 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "36b4896961171cd3317c7e9603d88f379f8c6e45342212235d356496680c68fd"
-"checksum stream-cipher 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5ef46e595d86556257889b73134905e6ca23a8c8911cb05875f6f1823e7912ca"
+"checksum stream-cipher 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8861bc80f649f5b4c9bd38b696ae9af74499d479dbfb327f0607de6b326a36bc"
 "checksum subtle 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 "checksum syn 0.13.4 (registry+https://github.com/rust-lang/crates.io-index)" = "90d5efaad92a0f96c629ae16302cc9591915930fd49ff0dcc6b4cde146782397"
 "checksum take 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b157868d8ac1f56b64604539990685fa7611d8fa9e5476cf0c02cf34d32917c5"

@@ -1,5 +1,5 @@
 use aes_ctr::stream_cipher::generic_array::GenericArray;
-use aes_ctr::stream_cipher::{NewFixStreamCipher, StreamCipherCore};
+use aes_ctr::stream_cipher::{NewStreamCipher, SyncStreamCipher};
 use aes_ctr::Aes128Ctr;
 use base64;
 use futures::sync::mpsc;
@@ -185,10 +185,12 @@ impl Service for Discovery {
             body.fold(Vec::new(), |mut acc, chunk| {
                 acc.extend_from_slice(chunk.as_ref());
                 Ok::<_, hyper::Error>(acc)
-            }).map(move |body| {
+            })
+            .map(move |body| {
                 params.extend(url::form_urlencoded::parse(&body).into_owned());
                 params
-            }).and_then(move |params| {
+            })
+            .and_then(move |params| {
                 match (method, params.get("action").map(AsRef::as_ref)) {
                     (Get, Some("getInfo")) => this.handle_get_info(&params),
                     (Post, Some("addUser")) => this.handle_add_user(&params),
@@ -226,7 +228,8 @@ pub fn discovery(
             &format!("0.0.0.0:{}", port).parse().unwrap(),
             &handle,
             move || Ok(discovery.clone()),
-        ).unwrap()
+        )
+        .unwrap()
     };
 
     let s_port = serve.incoming_ref().local_addr().port();
@@ -237,7 +240,8 @@ pub fn discovery(
             .for_each(move |connection| {
                 handle.spawn(connection.then(|_| Ok(())));
                 Ok(())
-            }).then(|_| Ok(()))
+            })
+            .then(|_| Ok(()))
     };
     handle.spawn(server_future);
 
@@ -249,7 +253,8 @@ pub fn discovery(
         None,
         s_port,
         &["VERSION=1.0", "CPath=/"],
-    ).unwrap();
+    )
+    .unwrap();
 
     #[cfg(not(feature = "with-dns-sd"))]
     let responder = mdns::Responder::spawn(&handle)?;
