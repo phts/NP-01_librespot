@@ -32,6 +32,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate sha1;
 extern crate shannon;
+extern crate tokio_codec;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate url;
