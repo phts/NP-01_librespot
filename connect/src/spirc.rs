@@ -14,13 +14,13 @@ use core::version;
 use core::volume::Volume;
 
 use protocol;
-use protocol::spirc::{DeviceState, Frame, MessageType, PlayStatus, State, TrackRef};
+use protocol::spirc::{DeviceState, Frame, MessageType, PlayStatus, State};
 
 use playback::mixer::Mixer;
 use playback::player::Player;
-use serde;
 use serde_json;
 
+use context::StationContext;
 use rand;
 use rand::Rng;
 use std;
@@ -28,46 +28,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 // Keep this here for now
 const SCOPES:&str =  "streaming,user-read-playback-state,user-modify-playback-state,user-read-currently-playing,user-read-private";
-
-#[derive(Deserialize, Debug)]
-struct TrackContext {
-    album_uri: String,
-    artist_uri: String,
-    // metadata: String,
-    #[serde(rename = "original_gid")]
-    gid: String,
-    uid: String,
-    uri: String,
-}
-#[derive(Deserialize, Debug)]
-struct StationContext {
-    uri: String,
-    next_page_url: String,
-    seeds: Vec<String>,
-    #[serde(deserialize_with = "deserialize_protobuf_TrackRef")]
-    tracks: Vec<TrackRef>,
-}
-
-#[allow(non_snake_case)]
-fn deserialize_protobuf_TrackRef<'de, D>(de: D) -> Result<Vec<TrackRef>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let v: Vec<TrackContext> = try!(serde::Deserialize::deserialize(de));
-    let track_vec = v
-        .iter()
-        .map(|v| {
-            let mut t = TrackRef::new();
-            //  This has got to be the most round about way of doing this.
-            t.set_gid(SpotifyId::from_base62(&v.gid).unwrap().to_raw().to_vec());
-            t.set_uri(v.uri.to_owned());
-
-            t
-        })
-        .collect::<Vec<TrackRef>>();
-
-    Ok(track_vec)
-}
 
 pub struct SpircTask {
     player: Player,
@@ -412,20 +372,33 @@ impl Future for SpircTask {
 
                 match self.context_fut.poll() {
                     Ok(Async::Ready(value)) => {
-                        let r_context = serde_json::from_value::<StationContext>(value).ok();
-                        debug!("Radio Context: {:#?}", r_context);
-                        if let Some(ref context) = r_context {
-                            warn!("Got {:?} tracks from <{}>", context.tracks.len(), context.uri);
-                        }
-                        self.context = r_context;
-
+                        let r_context = serde_json::from_value::<StationContext>(value.clone());
+                        self.context = match r_context {
+                            Ok(context) => {
+                                info!(
+                                    "Resolved {:?} tracks from <{:?}>",
+                                    context.tracks.len(),
+                                    self.state.get_context_uri(),
+                                );
+                                Some(context)
+                            }
+                            Err(e) => {
+                                error!("Unable to parse JSONContext {:?}\n{:?}", e, value);
+                                None
+                            }
+                        };
+                        // It needn't be so verbose - can be as simple as
+                        // if let Some(ref context) = r_context {
+                        //     info!("Got {:?} tracks from <{}>", context.tracks.len(), context.uri);
+                        // }
+                        // self.context = r_context;
                         progress = true;
                         self.context_fut = Box::new(future::empty());
                     }
                     Ok(Async::NotReady) => (),
                     Err(err) => {
                         self.context_fut = Box::new(future::empty());
-                        error!("Error: {:?}", err)
+                        error!("ContextPollError: {:?}", err)
                     }
                 }
             }
@@ -621,8 +594,9 @@ impl SpircTask {
                     }
                     self.state.set_playing_track_index(0);
                 } else {
-                    let context = self.state.get_context_uri();
-                    debug!("{:?}", context);
+                    self.handle_unshuffle();
+                    // let context = self.state.get_context_uri();
+                    // debug!("{:?}", context);
                 }
                 self.send_event(Event::Shuffle {
                     status: shuffle_status,
@@ -734,7 +708,9 @@ impl SpircTask {
             self.state.get_track().len() as u32 - new_index < 5
         );
         let context_uri = self.state.get_context_uri().to_owned();
-        if context_uri.contains("station") && ((self.state.get_track().len() as u32) - new_index) < 5 {
+        if (context_uri.starts_with("spotify:station:") || context_uri.starts_with("spotify:dailymix:"))
+            && ((self.state.get_track().len() as u32) - new_index) < 5
+        {
             self.context_fut = self.resolve_station(&context_uri);
             self.update_tracks_from_context();
         }
@@ -821,9 +797,19 @@ impl SpircTask {
         self.state.get_position_ms() + diff as u32
     }
 
+    fn handle_unshuffle(&mut self) {
+        // Reset tracks from context
+        let uri = self.state.get_context_uri().to_owned();
+        let page_url = format!("hm://context-resolve/v1/{}", uri);
+        warn!("Attempting to resolve page {:?}", page_url);
+        self.context_fut = self.resolve_uri(&page_url);
+        // let response = self.session.mercury().get(uri).wait().unwrap();
+        // warn!("Response: {:?}", response);
+    }
+
     fn resolve_station(&self, uri: &str) -> Box<Future<Item = serde_json::Value, Error = MercuryError>> {
         let radio_uri = format!("hm://radio-apollo/v3/stations/{}", uri);
-
+        info!("Resolving uri {:?}", uri);
         self.resolve_uri(&radio_uri)
     }
 
@@ -858,7 +844,7 @@ impl SpircTask {
         let context_uri = frame.get_state().get_context_uri().to_owned();
         let tracks = frame.get_state().get_track();
         debug!("Frame has {:?} tracks", tracks.len());
-        if context_uri.contains("station") {
+        if context_uri.starts_with("spotify:station:") || context_uri.starts_with("spotify:dailymix:") {
             self.context_fut = self.resolve_station(&context_uri);
         }
 
@@ -870,9 +856,26 @@ impl SpircTask {
     }
 
     fn load_track(&mut self, play: bool) {
-        let index = self.state.get_playing_track_index();
+        let mut index = self.state.get_playing_track_index();
         let track = {
-            let gid = self.state.get_track()[index as usize].get_gid();
+            // let gid = self.state.get_track()[index as usize].get_gid();
+            let track_ref = self.state.get_track()[index as usize].to_owned();
+            let mut gid = track_ref.get_gid();
+            if gid.len() != 16 {
+                let track_len = self.state.get_track().len() as u32;
+                if index < track_len - 1 {
+                    index = 0;
+                } else {
+                    index = index + 1;
+                }
+                warn!(
+                    "Skipping track {:?} at position [{}] of {}",
+                    track_ref.get_uri(),
+                    index,
+                    track_len
+                );
+                gid = self.state.get_track()[index as usize].get_gid();
+            }
             SpotifyId::from_raw(gid).unwrap()
         };
         let position = self.state.get_position_ms();
