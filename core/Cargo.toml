@@ -35,7 +35,6 @@ sha-1 = "0.8.0"
 hmac = "0.7.0"
 pbkdf2 = "0.3.0"
 aes = "0.3.1"
-block-modes = "0.2.0"
 
 [dependencies.librespot-protocol]
 path = "../protocol"

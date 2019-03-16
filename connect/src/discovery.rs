@@ -125,13 +125,9 @@ impl Discovery {
             h.result().code()
         };
 
-        let mac = {
-            let mut h = HmacSha1::new_varkey(&checksum_key).expect("HMAC can take key of any size");
-            h.input(encrypted);
-            h.result().code()
-        };
-
-        if mac != cksum {
+        let mut h = HmacSha1::new_varkey(&checksum_key).expect("HMAC can take key of any size");
+        h.input(encrypted);
+        if let Err(_) = h.verify(cksum) {
             warn!("Login error for user {:?}: MAC mismatch", username);
             let result = json!({
                 "status": 102,
@@ -140,7 +136,7 @@ impl Discovery {
             });
 
             let body = result.to_string();
-            return ::futures::finished(Response::new().with_body(body))
+            return ::futures::finished(Response::new().with_body(body));
         }
 
         let decrypted = {

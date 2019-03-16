@@ -13,7 +13,6 @@ extern crate serde_derive;
 
 extern crate aes;
 extern crate base64;
-extern crate block_modes;
 extern crate byteorder;
 extern crate bytes;
 extern crate extprim;
