@@ -47,7 +47,7 @@ pub struct SpircTask {
 
     shutdown: bool,
     session: Session,
-    hook_event_sender: std::sync::mpsc::Sender<Event>,
+    hook_event_sender: Option<std::sync::mpsc::Sender<Event>>,
     token_fut: Box<Future<Item = keymaster::Token, Error = MercuryError>>,
     context_fut: Box<Future<Item = serde_json::Value, Error = MercuryError>>,
     context: Option<StationContext>,
@@ -274,7 +274,7 @@ impl Spirc {
 
             shutdown: false,
             session: session.clone(),
-            hook_event_sender: hook_event_sender,
+            hook_event_sender: Some(hook_event_sender),
             token_fut: Box::new(future::empty()),
             context_fut: Box::new(future::empty()),
             context: None,
@@ -936,7 +936,9 @@ impl SpircTask {
     }
 
     fn send_event(&mut self, event: Event) {
-        let _ = self.hook_event_sender.send(event.clone());
+        if let Some(ref hook_event_sender) = self.hook_event_sender {
+            let _ = hook_event_sender.send(event.clone());
+        }
     }
 
     fn set_volume(&mut self, volume: u16) {
@@ -954,6 +956,7 @@ impl SpircTask {
 
 impl Drop for SpircTask {
     fn drop(&mut self) {
+        drop(self.hook_event_sender.take());
         debug!("drop Spirc[{}]", self.session.session_id());
     }
 }
