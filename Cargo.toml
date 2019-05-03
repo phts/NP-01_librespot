@@ -71,7 +71,7 @@ path = "playback"
 path = "protocol"
 
 [build-dependencies]
-rand            = "0.3.13"
+rand            = "0.6.5"
 vergen          = "0.1.0"
 
 [features]
