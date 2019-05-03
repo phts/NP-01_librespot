@@ -4,9 +4,9 @@ version = "0.1.0"
 authors = ["Paul Lietar <paul@lietar.net>"]
 
 [dependencies]
-byteorder = "1.2.1"
-futures = "0.1.23"
-linear-map = "1.0"
+byteorder = "1.3.1"
+futures = "0.1.26"
+linear-map = "1.2.0"
 protobuf = "2.5.0"
 
 [dependencies.librespot-core]
