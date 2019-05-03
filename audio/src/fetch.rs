@@ -61,7 +61,7 @@ impl AudioFileOpenStreaming {
         });
 
         let mut write_file = NamedTempFile::new().unwrap();
-        write_file.set_len(size as u64).unwrap();
+        write_file.as_file().set_len(size as u64).unwrap();
         write_file.seek(SeekFrom::Start(0)).unwrap();
 
         debug!(
@@ -167,7 +167,8 @@ impl AudioFile {
                     } else {
                         debug!("File {} complete", file_id);
                     }
-                }).or_else(|oneshot::Canceled| Ok(()))
+                })
+                .or_else(|oneshot::Canceled| Ok(()))
         });
 
         AudioFileOpen::Streaming(open)
