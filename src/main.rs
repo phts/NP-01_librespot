@@ -28,7 +28,7 @@ use url::Url;
 
 use librespot::core::authentication::{get_credentials, Credentials};
 use librespot::core::cache::Cache;
-use librespot::core::config::{ConnectConfig, DeviceType, SessionConfig};
+use librespot::core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
 use librespot::core::session::Session;
 use librespot::core::version;
 
@@ -190,10 +190,11 @@ fn setup(args: &[String]) -> Setup {
             "Pregain (dB) applied by volume normalisation",
             "PREGAIN",
         )
-        .optflag(
+        .optopt(
             "",
-            "linear-volume",
-            "increase volume linear instead of logarithmic.",
+            "volume-ctrl",
+            "Volume control type - [linear, log, fixed]. Default is logarithmic",
+            "VOLUME_CTRL"
         );
 
     let matches = match opts.parse(&args[1..]) {
@@ -252,7 +253,8 @@ fn setup(args: &[String]) -> Setup {
                 panic!("Initial volume must be in the range 0-100");
             }
             (volume as i32 * 0xFFFF / 100) as u16
-        }).or_else(|| cache.as_ref().and_then(Cache::volume))
+        })
+        .or_else(|| cache.as_ref().and_then(Cache::volume))
         .unwrap_or(0x8000);
 
     let zeroconf_port = matches
@@ -332,11 +334,17 @@ fn setup(args: &[String]) -> Setup {
             .map(|device_type| DeviceType::from_str(device_type).expect("Invalid device type"))
             .unwrap_or(DeviceType::default());
 
+        let volume_ctrl = matches
+            .opt_str("volume-ctrl")
+            .as_ref()
+            .map(|volume_ctrl| VolumeCtrl::from_str(volume_ctrl).expect("Invalid volume ctrl type"))
+            .unwrap_or(VolumeCtrl::default());
+
         ConnectConfig {
             name: name,
             device_type: device_type,
             volume: initial_volume,
-            linear_volume: matches.opt_present("linear-volume"),
+            volume_ctrl: volume_ctrl,
         }
     };
 

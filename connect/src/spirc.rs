@@ -3,7 +3,7 @@ use futures::sync::{mpsc, oneshot};
 use futures::{Async, Future, Poll, Sink, Stream};
 use protobuf::{self, Message};
 
-use core::config::ConnectConfig;
+use core::config::{ConnectConfig, VolumeCtrl};
 use core::events::Event;
 use core::keymaster;
 use core::mercury::MercuryError;
@@ -32,7 +32,7 @@ const SCOPES:&str =  "streaming,user-read-playback-state,user-modify-playback-st
 pub struct SpircTask {
     player: Player,
     mixer: Box<Mixer>,
-    linear_volume: bool,
+    volume_ctrl: VolumeCtrl,
 
     sequence: SeqGenerator<u32>,
 
@@ -141,7 +141,11 @@ fn initial_device_state(config: ConnectConfig) -> DeviceState {
                 msg.set_typ(protocol::spirc::CapabilityType::kVolumeSteps);
                 {
                     let repeated = msg.mut_intValue();
-                    repeated.push(64)
+                    if let VolumeCtrl::Fixed = config.volume_ctrl {
+                        repeated.push(0)
+                    } else {
+                        repeated.push(64)
+                    }
                 };
                 msg
             };
@@ -150,7 +154,7 @@ fn initial_device_state(config: ConnectConfig) -> DeviceState {
                 msg.set_typ(protocol::spirc::CapabilityType::kSupportsPlaylistV2);
                 {
                     let repeated = msg.mut_intValue();
-                    repeated.push(64)
+                    repeated.push(1)
                 };
                 msg
             };
@@ -209,12 +213,14 @@ fn calc_logarithmic_volume(volume: u16) -> u16 {
     val
 }
 
-fn volume_to_mixer(volume: u16, linear_volume: bool) -> u16 {
-    if linear_volume {
-        debug!("linear volume: {}", volume);
-        volume
-    } else {
-        calc_logarithmic_volume(volume)
+fn volume_to_mixer(volume: u16, volume_ctrl: &VolumeCtrl) -> u16 {
+    match volume_ctrl {
+        VolumeCtrl::Linear => {
+            debug!("linear volume: {}", volume);
+            volume
+        }
+        VolumeCtrl::Log => calc_logarithmic_volume(volume),
+        VolumeCtrl::Fixed => volume,
     }
 }
 
@@ -251,14 +257,14 @@ impl Spirc {
         let (cmd_tx, cmd_rx) = mpsc::unbounded();
 
         let volume = config.volume;
-        let linear_volume = config.linear_volume;
+        let volume_ctrl = config.volume_ctrl.to_owned();
 
         let device = initial_device_state(config);
 
         let mut task = SpircTask {
             player: player,
             mixer: mixer,
-            linear_volume: linear_volume,
+            volume_ctrl: volume_ctrl,
 
             sequence: SeqGenerator::new(1),
 
@@ -943,7 +949,7 @@ impl SpircTask {
 
     fn set_volume(&mut self, volume: u16) {
         self.device.set_volume(volume as u32);
-        let volume_to_mixer = volume_to_mixer(volume, self.linear_volume);
+        let volume_to_mixer = volume_to_mixer(volume, &self.volume_ctrl);
         self.mixer.set_volume(volume_to_mixer);
         self.send_event(Event::Volume {
             volume_to_mixer: volume_to_mixer,
