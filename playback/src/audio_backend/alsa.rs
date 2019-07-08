@@ -42,6 +42,11 @@ fn open_device(dev_name: &str) -> Result<(PCM), Box<Error>> {
         hwp.set_rate(44100, ValueOr::Nearest)?;
         hwp.set_channels(2)?;
         hwp.set_buffer_size_near(22050)?; // ~ 0.5s latency
+        if env::var("LIBRESPOT_RATE_RESAMPLE").is_ok() {
+            debug!("Allowing resampling, and setting period size: 1024");
+            hwp.set_rate_resample(true)?;
+            hwp.set_period_size_near(1024, ValueOr::Nearest)?;
+        }
         pcm.hw_params(&hwp)?;
 
         let swp = pcm.sw_params_current()?;
@@ -84,7 +89,8 @@ impl Open for AlsaSink {
             }
             Some(device) => device,
             None => "default",
-        }.to_string();
+        }
+        .to_string();
 
         AlsaSink(None, name)
     }
