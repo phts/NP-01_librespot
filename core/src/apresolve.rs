@@ -7,7 +7,6 @@ use hyper::{self, Client, Request, Uri};
 use hyper_proxy::{Intercept, Proxy, ProxyConnector};
 use serde_json;
 use std::str::FromStr;
-use tokio_core::reactor::Handle;
 use url::Url;
 
 error_chain! {}
@@ -18,7 +17,6 @@ pub struct APResolveData {
 }
 
 fn apresolve(
-    _handle: &Handle,
     proxy: &Option<Url>,
     ap_port: &Option<u16>,
 ) -> Box<dyn Future<Item = String, Error = Error>> {
@@ -84,14 +82,13 @@ fn apresolve(
 }
 
 pub(crate) fn apresolve_or_fallback<E>(
-    handle: &Handle,
     proxy: &Option<Url>,
     ap_port: &Option<u16>,
 ) -> Box<dyn Future<Item = String, Error = E>>
 where
     E: 'static,
 {
-    let ap = apresolve(handle, proxy, ap_port).or_else(|e| {
+    let ap = apresolve(proxy, ap_port).or_else(|e| {
         warn!("Failed to resolve Access Point: {}", e.description());
         warn!("Using fallback \"{}\"", AP_FALLBACK);
         Ok(AP_FALLBACK.into())
