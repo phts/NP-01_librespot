@@ -5,13 +5,13 @@ authors = ["Paul Lietar <paul@lietar.net>"]
 
 [dependencies]
 bit-set = "0.5.1"
-byteorder = "1.3.1"
-futures = "0.1.26"
+byteorder = "1.3.2"
+futures = "0.1.28"
 lewton = "0.9.4"
 log = "0.4.6"
 num-bigint = "0.2.2"
-num-traits = "0.2.6"
-tempfile = "3.0.7"
+num-traits = "0.2.8"
+tempfile = "3.1.0"
 aes-ctr = "0.3.0"
 
 tremor = { git = "https://github.com/plietar/rust-tremor", optional = true }

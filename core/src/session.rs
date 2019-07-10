@@ -1,5 +1,5 @@
 use std::io;
-use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -42,7 +42,7 @@ struct SessionInternal {
     session_id: usize,
 }
 
-static SESSION_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
+static SESSION_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Clone)]
 pub struct Session(Arc<SessionInternal>);
