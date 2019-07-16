@@ -47,6 +47,9 @@ static SESSION_COUNTER: AtomicUsize = AtomicUsize::new(0);
 #[derive(Clone)]
 pub struct Session(Arc<SessionInternal>);
 
+// #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+// pub struct SessionError;
+
 impl Session {
     pub fn connect(
         config: SessionConfig,
@@ -82,7 +85,7 @@ impl Session {
             );
 
             handle.spawn(task.map_err(|e| {
-                error!("{:?}", e);
+                error!("SessionError: {}", e.to_string());
             }));
 
             session
@@ -271,6 +274,7 @@ impl<S> Future for DispatchTask<S>
 where
     S: Stream<Item = (u8, Bytes)>,
     <S as Stream>::Error: ::std::fmt::Debug,
+    <S as Stream>::Error: std::convert::From<std::io::Error>,
 {
     type Item = ();
     type Error = S::Error;
@@ -282,17 +286,23 @@ where
         };
 
         loop {
-            let (cmd, data) = match self.0.poll() {
+            if let Some((cmd, data)) = match self.0.poll() {
                 Ok(Async::Ready(t)) => t,
                 Ok(Async::NotReady) => return Ok(Async::NotReady),
                 Err(e) => {
                     session.shutdown();
                     return Err(From::from(e));
                 }
+            } {
+                session.dispatch(cmd, data);
+            } else {
+                // TODO define new error types
+                session.shutdown();
+                return Err(From::from(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Connection Closed!",
+                )));
             }
-            .expect("Connection closed");
-
-            session.dispatch(cmd, data);
         }
     }
 }
