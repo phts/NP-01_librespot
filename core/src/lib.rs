@@ -15,7 +15,6 @@ extern crate aes;
 extern crate base64;
 extern crate byteorder;
 extern crate bytes;
-extern crate extprim;
 extern crate hmac;
 extern crate httparse;
 extern crate hyper;
