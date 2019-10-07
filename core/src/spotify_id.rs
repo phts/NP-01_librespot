@@ -4,7 +4,7 @@ use std;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SpotifyTrackType {
+pub enum SpotifyAudioType {
     Track,
     Podcast,
 }
@@ -12,7 +12,7 @@ pub enum SpotifyTrackType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SpotifyId {
     pub id: u128,
-    pub track_type: SpotifyTrackType,
+    pub audio_type: SpotifyAudioType,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -25,7 +25,7 @@ impl SpotifyId {
     fn as_track(n: u128) -> SpotifyId {
         SpotifyId {
             id: n.to_owned(),
-            track_type: SpotifyTrackType::Track,
+            audio_type: SpotifyAudioType::Track,
         }
     }
 
@@ -75,7 +75,7 @@ impl SpotifyId {
         let parts = uri.split(":").collect::<Vec<&str>>();
         if uri.contains(":show:") || uri.contains(":episode:") {
             let mut spotify_id = SpotifyId::from_base62(parts[2]).unwrap();
-            spotify_id.track_type = SpotifyTrackType::Podcast;
+            spotify_id.audio_type = SpotifyAudioType::Podcast;
             Ok(spotify_id)
         } else {
             SpotifyId::from_base62(parts[2])
