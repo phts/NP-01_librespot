@@ -32,7 +32,7 @@ impl AlsaMixer {
         f64::from(vol - min) / f64::from(max - min)
     }
 
-    fn init_mixer(mut config: MixerConfig) -> Result<AlsaMixer, Box<Error>> {
+    fn init_mixer(mut config: MixerConfig) -> Result<AlsaMixer, Box<dyn Error>> {
         let mixer = alsa::mixer::Mixer::new(&config.card, false)?;
         let sid = alsa::mixer::SelemId::new(&config.mixer, config.index);
 
@@ -76,7 +76,7 @@ impl AlsaMixer {
         })
     }
 
-    fn map_volume(&self, set_volume: Option<u16>) -> Result<(u16), Box<Error>> {
+    fn map_volume(&self, set_volume: Option<u16>) -> Result<(u16), Box<dyn Error>> {
         let mixer = alsa::mixer::Mixer::new(&self.config.card, false)?;
         let sid = alsa::mixer::SelemId::new(&*self.config.mixer, self.config.index);
 
@@ -186,7 +186,7 @@ impl Mixer for AlsaMixer {
         }
     }
 
-    fn get_audio_filter(&self) -> Option<Box<AudioFilter + Send>> {
+    fn get_audio_filter(&self) -> Option<Box<dyn AudioFilter + Send>> {
         None
     }
 }

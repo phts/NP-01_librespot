@@ -75,7 +75,7 @@ impl error::Error for VorbisError {
         error::Error::description(&self.0)
     }
 
-    fn source(&self) -> Option<&(error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         error::Error::source(&self.0)
     }
 }

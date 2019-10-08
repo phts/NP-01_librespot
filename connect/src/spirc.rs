@@ -31,7 +31,7 @@ const SCOPES:&str =  "streaming,user-read-playback-state,user-modify-playback-st
 
 pub struct SpircTask {
     player: Player,
-    mixer: Box<Mixer>,
+    mixer: Box<dyn Mixer>,
     volume_ctrl: VolumeCtrl,
 
     sequence: SeqGenerator<u32>,
@@ -40,16 +40,16 @@ pub struct SpircTask {
     device: DeviceState,
     state: State,
 
-    subscription: Box<Stream<Item = Frame, Error = MercuryError>>,
-    sender: Box<Sink<SinkItem = Frame, SinkError = MercuryError>>,
+    subscription: Box<dyn Stream<Item = Frame, Error = MercuryError>>,
+    sender: Box<dyn Sink<SinkItem = Frame, SinkError = MercuryError>>,
     commands: mpsc::UnboundedReceiver<SpircCommand>,
-    end_of_track: Box<Future<Item = (), Error = oneshot::Canceled>>,
+    end_of_track: Box<dyn Future<Item = (), Error = oneshot::Canceled>>,
 
     shutdown: bool,
     session: Session,
     hook_event_sender: Option<std::sync::mpsc::Sender<Event>>,
-    token_fut: Box<Future<Item = keymaster::Token, Error = MercuryError>>,
-    context_fut: Box<Future<Item = serde_json::Value, Error = MercuryError>>,
+    token_fut: Box<dyn Future<Item = keymaster::Token, Error = MercuryError>>,
+    context_fut: Box<dyn Future<Item = serde_json::Value, Error = MercuryError>>,
     context: Option<StationContext>,
 }
 
@@ -230,7 +230,7 @@ impl Spirc {
         config: ConnectConfig,
         session: Session,
         player: Player,
-        mixer: Box<Mixer>,
+        mixer: Box<dyn Mixer>,
         hook_event_sender: std::sync::mpsc::Sender<Event>,
     ) -> (Spirc, SpircTask) {
         debug!("new Spirc[{}]", session.session_id());
@@ -827,13 +827,13 @@ impl SpircTask {
         // warn!("Response: {:?}", response);
     }
 
-    fn resolve_station(&self, uri: &str) -> Box<Future<Item = serde_json::Value, Error = MercuryError>> {
+    fn resolve_station(&self, uri: &str) -> Box<dyn Future<Item = serde_json::Value, Error = MercuryError>> {
         let radio_uri = format!("hm://radio-apollo/v3/stations/{}", uri);
         info!("Resolving uri {:?}", uri);
         self.resolve_uri(&radio_uri)
     }
 
-    fn resolve_uri(&self, uri: &str) -> Box<Future<Item = serde_json::Value, Error = MercuryError>> {
+    fn resolve_uri(&self, uri: &str) -> Box<dyn Future<Item = serde_json::Value, Error = MercuryError>> {
         let request = self.session.mercury().get(uri);
 
         Box::new(request.and_then(move |response| {
