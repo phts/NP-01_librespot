@@ -8,13 +8,13 @@ use core::events::Event;
 use core::keymaster;
 use core::mercury::MercuryError;
 use core::session::Session;
-use core::spotify_id::SpotifyId;
+use core::spotify_id::{SpotifyId, SpotifyIdError};
 use core::util::SeqGenerator;
 use core::version;
 use core::volume::Volume;
 
 use protocol;
-use protocol::spirc::{DeviceState, Frame, MessageType, PlayStatus, State};
+use protocol::spirc::{DeviceState, Frame, MessageType, PlayStatus, State, TrackRef};
 
 use playback::mixer::Mixer;
 use playback::player::Player;
@@ -827,7 +827,10 @@ impl SpircTask {
         // warn!("Response: {:?}", response);
     }
 
-    fn resolve_station(&self, uri: &str) -> Box<dyn Future<Item = serde_json::Value, Error = MercuryError>> {
+    fn resolve_station(
+        &self,
+        uri: &str,
+    ) -> Box<dyn Future<Item = serde_json::Value, Error = MercuryError>> {
         let radio_uri = format!("hm://radio-apollo/v3/stations/{}", uri);
         info!("Resolving uri {:?}", uri);
         self.resolve_uri(&radio_uri)
@@ -869,7 +872,7 @@ impl SpircTask {
     }
 
     fn update_tracks(&mut self, frame: &protocol::spirc::Frame) {
-        // debug!("State: {:?}", frame.get_state());
+        debug!("State: {:?}", frame.get_state());
         let index = frame.get_state().get_playing_track_index();
         let context_uri = frame.get_state().get_context_uri().to_owned();
         let tracks = frame.get_state().get_track();
@@ -885,31 +888,43 @@ impl SpircTask {
         self.state.set_shuffle(frame.get_state().get_shuffle());
     }
 
+    // should this be a method of SpotifyId directly?
+    fn get_spotify_id_for_track(&self, track_ref: &TrackRef) -> Result<SpotifyId, SpotifyIdError> {
+        SpotifyId::from_raw(track_ref.get_gid()).or_else(|_| {
+            let uri = track_ref.get_uri();
+            debug!("Malformed or no gid, attempting to parse URI <{}>", uri);
+            SpotifyId::from_uri(uri)
+        })
+    }
+
     fn load_track(&mut self, play: bool) {
         let context_uri = self.state.get_context_uri().to_owned();
-        let index = self.state.get_playing_track_index();
-        info!("context: {}", context_uri);
-        // Redundant check here
-        let track = if context_uri.contains(":show:") || context_uri.contains(":episode:") {
-            let uri = self.state.get_track()[index as usize].get_uri();
-            SpotifyId::from_uri(uri).expect("Unable to parse uri")
-        } else {
-            let mut index = self.state.get_playing_track_index();
-            // Check for malformed gid
-            let tracks_len = self.state.get_track().len() as u32;
+        let mut index = self.state.get_playing_track_index();
+        let tracks_len = self.state.get_track().len() as u32;
+        debug!(
+            "Loading context: {} index: [{}] of {}",
+            context_uri, index, tracks_len
+        );
+        // Tracks either have a gid or uri.
+        // Context based frames sometimes use spotify:meta:page: that needs to be ignored.
+        let track = {
             let mut track_ref = &self.state.get_track()[index as usize];
-            while track_ref.get_gid().len() != 16 {
+            let mut track_id = self.get_spotify_id_for_track(track_ref);
+            while track_id.is_err() {
                 warn!(
                     "Skipping track {:?} at position [{}] of {}",
                     track_ref.get_uri(),
                     index,
                     tracks_len
                 );
+                // This will keep looping over, instead we should cylce tracks only once
                 index = if index + 1 < tracks_len { index + 1 } else { 0 };
                 track_ref = &self.state.get_track()[index as usize];
+                track_id = self.get_spotify_id_for_track(track_ref);
             }
-            SpotifyId::from_raw(track_ref.get_gid()).unwrap()
-        };
+            track_id
+        }
+        .unwrap();
 
         let position = self.state.get_position_ms();
         let end_of_track = self.player.load(track, play, position);
