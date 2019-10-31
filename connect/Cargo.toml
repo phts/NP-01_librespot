@@ -6,7 +6,7 @@ authors = ["Paul Lietar <paul@lietar.net>"]
 [dependencies]
 base64 = "0.10.1"
 futures = "0.1.28"
-hyper = "0.11.2"
+hyper = "0.12.35"
 log = "0.4.6"
 num-bigint = "0.2.2"
 protobuf = "~2.8.1"
