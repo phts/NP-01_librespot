@@ -85,6 +85,7 @@ pub struct ConnectConfig {
     pub device_type: DeviceType,
     pub volume: u16,
     pub volume_ctrl: VolumeCtrl,
+    pub autoplay: bool,
 }
 
 #[derive(Clone, Debug)]

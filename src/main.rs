@@ -194,7 +194,12 @@ fn setup(args: &[String]) -> Setup {
             "",
             "volume-ctrl",
             "Volume control type - [linear, log, fixed]. Default is logarithmic",
-            "VOLUME_CTRL"
+            "VOLUME_CTRL",
+        )
+        .optflag(
+            "",
+            "autoplay",
+            "autoplay similar songs when your music ends.",
         );
 
     let matches = match opts.parse(&args[1..]) {
@@ -345,6 +350,7 @@ fn setup(args: &[String]) -> Setup {
             device_type: device_type,
             volume: initial_volume,
             volume_ctrl: volume_ctrl,
+            autoplay: matches.opt_present("autoplay"),
         }
     };
 

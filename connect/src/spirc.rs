@@ -32,7 +32,7 @@ const SCOPES:&str =  "streaming,user-read-playback-state,user-modify-playback-st
 pub struct SpircTask {
     player: Player,
     mixer: Box<dyn Mixer>,
-    volume_ctrl: VolumeCtrl,
+    config: SpircTaskConfig,
 
     sequence: SeqGenerator<u32>,
 
@@ -63,6 +63,11 @@ pub enum SpircCommand {
     VolumeUp,
     VolumeDown,
     Shutdown,
+}
+
+struct SpircTaskConfig {
+    volume_ctrl: VolumeCtrl,
+    autoplay: bool,
 }
 
 const CONTEXT_TRACKS_HISTORY: usize = 10;
@@ -259,14 +264,18 @@ impl Spirc {
         let (cmd_tx, cmd_rx) = mpsc::unbounded();
 
         let volume = config.volume;
-        let volume_ctrl = config.volume_ctrl.to_owned();
+
+        let task_config = SpircTaskConfig {
+            volume_ctrl: config.volume_ctrl.to_owned(),
+            autoplay: config.autoplay,
+        };
 
         let device = initial_device_state(config);
 
         let mut task = SpircTask {
             player: player,
             mixer: mixer,
-            volume_ctrl: volume_ctrl,
+            config: task_config,
 
             sequence: SeqGenerator::new(1),
 
@@ -409,7 +418,7 @@ impl Future for SpircTask {
 
                 match self.autoplay_fut.poll() {
                     Ok(Async::Ready(autoplay_station_uri)) => {
-                        info!("Autoplay resolved to <{:?}>", autoplay_station_uri);
+                        info!("Autoplay uri resolved to <{:?}>", autoplay_station_uri);
                         self.context_fut = self.resolve_station(&autoplay_station_uri);
                         progress = true;
                         self.autoplay_fut = Box::new(future::empty());
@@ -749,11 +758,11 @@ impl SpircTask {
             self.context_fut = self.resolve_station(&context_uri);
             self.update_tracks_from_context();
         }
-        if new_index == tracks_len - 1 {
+        if self.config.autoplay && new_index == tracks_len - 1 {
             // Extend the playlist
             // Note: This doesn't seem to reflect in the UI
-            // the additional tracks in the frame don't show up as with stations
-            info!("Extending playlist <{}>", context_uri);
+            // the additional tracks in the frame don't show up as with station view
+            debug!("Extending playlist <{}>", context_uri);
             self.update_tracks_from_context();
         }
         if new_index >= tracks_len {
@@ -916,7 +925,8 @@ impl SpircTask {
         debug!("Frame has {:?} tracks", tracks.len());
         if context_uri.starts_with("spotify:station:") || context_uri.starts_with("spotify:dailymix:") {
             self.context_fut = self.resolve_station(&context_uri);
-        } else {
+        } else if self.config.autoplay {
+            info!("Fetching autoplay context uri");
             // Get autoplay_station_uri for regular playlists
             self.autoplay_fut = self.resolve_autoplay_uri(&context_uri);
         }
@@ -1021,7 +1031,7 @@ impl SpircTask {
 
     fn set_volume(&mut self, volume: u16) {
         self.device.set_volume(volume as u32);
-        let volume_to_mixer = volume_to_mixer(volume, &self.volume_ctrl);
+        let volume_to_mixer = volume_to_mixer(volume, &self.config.volume_ctrl);
         self.mixer.set_volume(volume_to_mixer);
         self.send_event(Event::Volume {
             volume_to_mixer: volume_to_mixer,
