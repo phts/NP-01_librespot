@@ -28,7 +28,10 @@ pub fn connect(
     let (addr, connect_url) = match *proxy {
         Some(ref url) => {
             info!("Using proxy \"{}\"", url);
-            (url.to_socket_addrs().unwrap().next().unwrap(), Some(addr))
+            (
+                url.socket_addrs(|| None).unwrap().last().unwrap().to_owned(),
+                Some(addr),
+            )
         }
         None => (addr.to_socket_addrs().unwrap().next().unwrap(), None),
     };

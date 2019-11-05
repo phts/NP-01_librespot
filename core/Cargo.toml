@@ -27,7 +27,7 @@ shannon = "0.2.0"
 tokio-codec = "0.1.1"
 tokio-core = "0.1.17"
 tokio-io = "0.1.12"
-url = "1.7.2"
+url = "2.1.0"
 uuid = { version = "0.7.4", features = ["v4"] }
 sha-1 = "0.8.1"
 hmac = "0.7.0"
