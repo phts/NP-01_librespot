@@ -16,7 +16,7 @@ use sha1::{Digest, Sha1};
 use dns_sd::DNSService;
 
 #[cfg(not(feature = "with-dns-sd"))]
-use mdns;
+use libmdns;
 
 use num_bigint::BigUint;
 use rand;
@@ -224,7 +224,7 @@ pub struct DiscoveryStream {
 #[cfg(not(feature = "with-dns-sd"))]
 pub struct DiscoveryStream {
     credentials: mpsc::UnboundedReceiver<Credentials>,
-    _svc: mdns::Service,
+    _svc: libmdns::Service,
 }
 
 pub fn discovery(
@@ -275,7 +275,7 @@ pub fn discovery(
     .unwrap();
 
     #[cfg(not(feature = "with-dns-sd"))]
-    let responder = mdns::Responder::spawn(handle)?;
+    let responder = libmdns::Responder::spawn(handle)?;
 
     #[cfg(not(feature = "with-dns-sd"))]
     let svc = responder.register(
