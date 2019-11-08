@@ -6,7 +6,10 @@ use futures::sync::mpsc;
 use futures::{Future, Poll, Stream};
 use hmac::{Hmac, Mac};
 
-use hyper::{self, server::conn::Http, service::Service, Body, Method, Request, Response, StatusCode};
+use hyper::{
+    self, header::USER_AGENT, server::conn::Http, service::Service, Body, Method, Request, Response,
+    StatusCode,
+};
 use sha1::{Digest, Sha1};
 
 #[cfg(feature = "with-dns-sd")]
@@ -73,7 +76,7 @@ impl Discovery {
 
         let result = json!({
             "status": 101,
-            "statusString": "ERROR-OK",
+            "statusString": "OK",
             "spotifyError": 0,
             "version": "2.1.0",
             "deviceID": (self.0.device_id),
@@ -178,8 +181,10 @@ impl Service for Discovery {
     type Future = Box<dyn Future<Item = Response<(Self::ResBody)>, Error = hyper::Error> + Send>;
     fn call(&mut self, request: Request<(Self::ReqBody)>) -> Self::Future {
         let mut params = BTreeMap::new();
-
+        trace!("DiscoveryReqest {:?}", request);
         let (parts, body) = request.into_parts();
+        info!("ConnectRequest: {:?} ", parts.headers.get(USER_AGENT).unwrap(),);
+        debug!("ConnectRequest: {:?}", parts.uri.query());
 
         if let Some(query) = parts.uri.query() {
             params.extend(url::form_urlencoded::parse(query.as_bytes()).into_owned());
@@ -242,16 +247,15 @@ pub fn discovery(
 
     let s_port = serve.incoming_ref().local_addr().port();
     debug!("Zeroconf server listening on 0.0.0.0:{}", s_port);
-
     let server_future = {
         let handle = handle.clone();
         serve
             .for_each(
                 move |connecting: hyper::server::conn::Connecting<
                     hyper::server::conn::AddrStream,
-                    futures::Failed<_, hyper::Error>,
+                    futures::Done<Discovery, hyper::Error>,
                 >| {
-                    handle.spawn(connecting.then(|_| Ok(())));
+                    handle.spawn(connecting.flatten().then(|_| Ok(())));
                     Ok(())
                 },
             )
