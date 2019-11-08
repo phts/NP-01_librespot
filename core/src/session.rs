@@ -86,6 +86,7 @@ impl Session {
 
             handle.spawn(task.map_err(|e| {
                 error!("SessionError: {}", e.to_string());
+                std::process::exit(0);
             }));
 
             session
