@@ -7,38 +7,46 @@ extern crate log;
 extern crate hex;
 extern crate rpassword;
 extern crate sha1;
-extern crate tokio_core;
+extern crate tokio;
 extern crate tokio_io;
 extern crate tokio_signal;
 extern crate url;
 
 use env_logger::Builder;
-use futures::{Async, Future, Poll, Stream};
+use futures::{sync::mpsc::UnboundedReceiver, Async, Future, Poll, Stream};
 use sha1::{Digest, Sha1};
-use std::env;
-use std::io::{self, stderr, Write};
-use std::mem;
-use std::path::PathBuf;
-use std::process::exit;
-use std::str::FromStr;
-use std::time::Instant;
+use std::{
+    env,
+    io::{self, stderr, Write},
+    mem,
+    path::PathBuf,
+    process::exit,
+    str::FromStr,
+};
+use tokio::runtime::current_thread;
 
-use tokio_core::reactor::{Core, Handle};
 use tokio_io::IoStream;
 use url::Url;
 
-use librespot::core::authentication::{get_credentials, Credentials};
-use librespot::core::cache::Cache;
-use librespot::core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
-use librespot::core::session::Session;
-use librespot::core::version;
+use librespot::core::{
+    authentication::{get_credentials, Credentials},
+    cache::Cache,
+    config::{ConnectConfig, DeviceType, SessionConfig},
+    session::Session,
+    version,
+};
 
-use librespot::connect::discovery::{discovery, DiscoveryStream};
-use librespot::connect::spirc::{Spirc, SpircTask};
-use librespot::playback::audio_backend::{self, Sink, BACKENDS};
-use librespot::playback::config::{Bitrate, PlayerConfig};
-use librespot::playback::mixer::{self, Mixer, MixerConfig};
-use librespot::playback::player::Player;
+use librespot::connect::{
+    discovery::{discovery, DiscoveryStream},
+    spirc::{Spirc, SpircTask},
+};
+
+use librespot::playback::{
+    audio_backend::{self, Sink, BACKENDS},
+    config::{Bitrate, PlayerConfig},
+    mixer::{self, Mixer, MixerConfig},
+    player::{Player, PlayerEvent},
+};
 
 use librespot::core::events::Event;
 mod player_event_handler;
@@ -382,8 +390,6 @@ struct Main {
     device: Option<String>,
     mixer: fn(Option<MixerConfig>) -> Box<Mixer>,
     mixer_config: MixerConfig,
-    handle: Handle,
-
     discovery: Option<DiscoveryStream>,
     signal: IoStream<()>,
 
@@ -402,9 +408,8 @@ struct Main {
 }
 
 impl Main {
-    fn new(handle: Handle, setup: Setup) -> Main {
+    fn new(setup: Setup) -> Main {
         let mut task = Main {
-            handle: handle.clone(),
             cache: setup.cache,
             session_config: setup.session_config,
             player_config: setup.player_config,
@@ -429,12 +434,12 @@ impl Main {
             session: None,
         };
 
-        if setup.enable_discovery {
-            let config = task.connect_config.clone();
-            let device_id = task.session_config.device_id.clone();
-
-            task.discovery = Some(discovery(&handle, config, device_id, setup.zeroconf_port).unwrap());
-        }
+        // if setup.enable_discovery {
+        //     let config = task.connect_config.clone();
+        //     let device_id = task.session_config.device_id.clone();
+        //
+        //     task.discovery = Some(discovery(config, device_id, setup.zeroconf_port).unwrap());
+        // }
 
         if let Some(credentials) = setup.credentials {
             task.credentials(credentials);
@@ -446,15 +451,14 @@ impl Main {
     fn credentials(&mut self, credentials: Credentials) {
         self.last_credentials = Some(credentials.clone());
         let config = self.session_config.clone();
-        let handle = self.handle.clone();
 
-        let connection = Session::connect(config, credentials, self.cache.clone(), handle);
+        let connection = Session::connect(config, credentials, self.cache.clone());
 
         self.connect = connection;
         self.spirc = None;
         let task = mem::replace(&mut self.spirc_task, None);
         if let Some(task) = task {
-            self.handle.spawn(task);
+            current_thread::spawn(Box::new(task));
         }
     }
 }
@@ -566,7 +570,7 @@ impl Future for Main {
                                     })
                                     .map_err(|e| error!("failed to wait on child process: {}", e));
 
-                                self.handle.spawn(child);
+                                current_thread::spawn(child);
                             }
                         }
                     }
@@ -586,10 +590,8 @@ fn main() {
     if env::var("RUST_BACKTRACE").is_err() {
         env::set_var("RUST_BACKTRACE", "full")
     }
-    let mut core = Core::new().unwrap();
-    let handle = core.handle();
 
     let args: Vec<String> = std::env::args().collect();
 
-    core.run(Main::new(handle, setup(&args))).unwrap()
+    current_thread::block_on_all(Main::new(setup(&args))).unwrap()
 }

@@ -2,3 +2,4 @@ max_width = 105
 reorder_imports = true
 reorder_modules = true
 use_try_shorthand =true
+edition = "2018"

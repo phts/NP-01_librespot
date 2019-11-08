@@ -7,7 +7,8 @@ use byteorder::{BigEndian, ByteOrder};
 use bytes::Bytes;
 use futures::sync::mpsc;
 use futures::{Async, Future, IntoFuture, Poll, Stream};
-use tokio_core::reactor::{Handle, Remote};
+use tokio::runtime::current_thread;
+// use tokio::runtime::current_thread::Handle;
 
 use apresolve::apresolve_or_fallback;
 use audio_key::AudioKeyManager;
@@ -37,8 +38,7 @@ struct SessionInternal {
     mercury: Lazy<MercuryManager>,
     cache: Option<Arc<Cache>>,
 
-    handle: Remote,
-
+    // handle: Handle,
     session_id: usize,
 }
 
@@ -55,15 +55,14 @@ impl Session {
         config: SessionConfig,
         credentials: Credentials,
         cache: Option<Cache>,
-        handle: Handle,
+        // handle: Handle,
     ) -> Box<dyn Future<Item = Session, Error = io::Error>> {
         let access_point = apresolve_or_fallback::<io::Error>(&config.proxy, &config.ap_port);
 
-        let handle_ = handle.clone();
         let proxy = config.proxy.clone();
         let connection = access_point.and_then(move |addr| {
             info!("Connecting to AP \"{}\"", addr);
-            connection::connect(addr, &handle_, &proxy)
+            connection::connect(addr, &proxy)
         });
 
         let device_id = config.device_id.clone();
@@ -77,14 +76,14 @@ impl Session {
             }
 
             let (session, task) = Session::create(
-                &handle,
+                // &handle,
                 transport,
                 config,
                 cache,
                 reusable_credentials.username.clone(),
             );
 
-            handle.spawn(task.map_err(|e| {
+            current_thread::spawn(task.map_err(|e| {
                 error!("SessionError: {}", e.to_string());
                 std::process::exit(0);
             }));
@@ -96,7 +95,7 @@ impl Session {
     }
 
     fn create(
-        handle: &Handle,
+        // handle: &Handle,
         transport: connection::Transport,
         config: SessionConfig,
         cache: Option<Cache>,
@@ -126,8 +125,7 @@ impl Session {
             channel: Lazy::new(),
             mercury: Lazy::new(),
 
-            handle: handle.remote().clone(),
-
+            // handle: handle.clone(),
             session_id: session_id,
         }));
 
@@ -138,7 +136,6 @@ impl Session {
         let receiver_task = DispatchTask(stream, session.weak());
 
         let task = Box::new((receiver_task, sender_task).into_future().map(|((), ())| ()));
-
         (session, task)
     }
 
@@ -158,13 +155,11 @@ impl Session {
         self.0.data.read().unwrap().time_delta
     }
 
-    pub fn spawn<F, R>(&self, f: F)
+    pub fn spawn<F>(&self, f: F)
     where
-        F: FnOnce(&Handle) -> R + Send + 'static,
-        R: IntoFuture<Item = (), Error = ()>,
-        R::Future: 'static,
+        F: Future<Item = (), Error = ()> + 'static,
     {
-        self.0.handle.spawn(f)
+        current_thread::spawn(f);
     }
 
     fn debug_info(&self) {
@@ -202,7 +197,7 @@ impl Session {
             0x9 | 0xa => self.channel().dispatch(cmd, data),
             0xd | 0xe => self.audio_key().dispatch(cmd, data),
             0xb2..=0xb6 => self.mercury().dispatch(cmd, data),
-            _ => (),
+            _ => trace!("Unknown dispatch cmd :{:?} {:?}", cmd, data),
         }
     }
 
