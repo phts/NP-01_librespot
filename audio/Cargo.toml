@@ -6,6 +6,7 @@ authors = ["Paul Lietar <paul@lietar.net>"]
 [dependencies]
 bit-set = "0.5.1"
 byteorder = "1.3.2"
+bytes = "0.4"
 futures = "0.1.28"
 lewton = "0.9.4"
 log = "0.4.6"
