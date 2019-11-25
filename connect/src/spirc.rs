@@ -60,6 +60,7 @@ pub enum SpircCommand {
     Pause,
     Prev,
     Next,
+    Volume(u16),
     VolumeUp,
     VolumeDown,
     Shutdown,
@@ -325,6 +326,9 @@ impl Spirc {
     pub fn volume_up(&self) {
         let _ = self.commands.unbounded_send(SpircCommand::VolumeUp);
     }
+    pub fn volume(&self, volume: u16) {
+        let _ = self.commands.unbounded_send(SpircCommand::Volume(volume));
+    }
     pub fn volume_down(&self) {
         let _ = self.commands.unbounded_send(SpircCommand::VolumeDown);
     }
@@ -504,6 +508,14 @@ impl SpircTask {
                     self.notify(None);
                 } else {
                     CommandSender::new(self, MessageType::kMessageTypeVolumeUp).send();
+                }
+            }
+            SpircCommand::Volume(volume) => {
+                if active {
+                    self.set_volume(volume);
+                    self.notify(None);
+                } else {
+                    CommandSender::new(self, MessageType::kMessageTypeVolume).send();
                 }
             }
             SpircCommand::VolumeDown => {
