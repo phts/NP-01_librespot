@@ -241,6 +241,8 @@ impl Session {
     pub fn shutdown(&self) {
         debug!("Invalidating session[{}]", self.0.session_id);
         self.0.data.write().unwrap().invalid = true;
+        self.mercury().shutdown();
+        self.channel().shutdown();
     }
 
     pub fn is_invalid(&self) -> bool {
@@ -287,23 +289,20 @@ where
         };
 
         loop {
-            if let Some((cmd, data)) = match self.0.poll() {
-                Ok(Async::Ready(t)) => t,
+            let (cmd, data) = match self.0.poll() {
+                Ok(Async::Ready(Some(t))) => t,
+                Ok(Async::Ready(None)) => {
+                    warn!("Connection to server closed.");
+                    session.shutdown();
+                    return Ok(Async::Ready(()));
+                }
                 Ok(Async::NotReady) => return Ok(Async::NotReady),
                 Err(e) => {
                     session.shutdown();
                     return Err(From::from(e));
                 }
-            } {
-                session.dispatch(cmd, data);
-            } else {
-                // TODO define new error types
-                session.shutdown();
-                return Err(From::from(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Connection Closed!",
-                )));
-            }
+            };
+            session.dispatch(cmd, data);
         }
     }
 }

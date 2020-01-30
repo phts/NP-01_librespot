@@ -21,7 +21,8 @@ use std::mem;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
-use std::sync::mpsc::{channel, Receiver, TryRecvError};
+use std::time::Instant;
+
 use tokio_core::reactor::{Core, Handle};
 use tokio_io::IoStream;
 use url::Url;
@@ -391,6 +392,8 @@ struct Main {
     connect: Box<Future<Item = Session, Error = io::Error>>,
 
     shutdown: bool,
+    last_credentials: Option<Credentials>,
+    auto_connect_times: Vec<Instant>,
 
     player_event_program: Option<String>,
 
@@ -416,7 +419,9 @@ impl Main {
             spirc: None,
             spirc_task: None,
             shutdown: false,
-            signal: Box::new(tokio_signal::ctrl_c(&handle).flatten_stream()),
+            last_credentials: None,
+            auto_connect_times: Vec::new(),
+            signal: Box::new(tokio_signal::ctrl_c().flatten_stream()),
 
             player_event_program: setup.player_event_program,
 
@@ -439,6 +444,7 @@ impl Main {
     }
 
     fn credentials(&mut self, credentials: Credentials) {
+        self.last_credentials = Some(credentials.clone());
         let config = self.session_config.clone();
         let handle = self.handle.clone();
 
@@ -465,46 +471,40 @@ impl Future for Main {
                 if let Some(ref spirc) = self.spirc {
                     spirc.shutdown();
                 }
+                self.auto_connect_times.clear();
                 self.credentials(creds);
 
                 progress = true;
             }
 
-            if let Async::Ready(session) = self.connect.poll().unwrap() {
-                self.connect = Box::new(futures::future::empty());
-                let device = self.device.clone();
-                let mixer_config = self.mixer_config.clone();
-                let mixer = (self.mixer)(Some(mixer_config));
-                let player_config = self.player_config.clone();
-                let connect_config = self.connect_config.clone();
+            match self.connect.poll() {
+                Ok(Async::Ready(session)) => {
+                    self.connect = Box::new(futures::future::empty());
+                    let mixer_config = self.mixer_config.clone();
+                    let mixer = (self.mixer)(Some(mixer_config));
+                    let player_config = self.player_config.clone();
+                    let connect_config = self.connect_config.clone();
 
-                // For event hooks
-                // let (event_sender, event_receiver) = futures::sync::mpsc::unbounded();
-                let (event_sender, event_receiver) = channel();
+                    let audio_filter = mixer.get_audio_filter();
+                    let backend = self.backend;
+                    let device = self.device.clone();
+                    let (player, event_channel) =
+                        Player::new(player_config, session.clone(), audio_filter, move || {
+                            (backend)(device)
+                        });
 
-                let audio_filter = mixer.get_audio_filter();
-                let backend = self.backend;
-                let player = Player::new(
-                    player_config,
-                    session.clone(),
-                    event_sender.clone(),
-                    audio_filter,
-                    move || (backend)(device),
-                );
+                    let (spirc, spirc_task) = Spirc::new(connect_config, session, player, mixer);
+                    self.spirc = Some(spirc);
+                    self.spirc_task = Some(spirc_task);
+                    self.player_event_channel = Some(event_channel);
 
-                let (spirc, spirc_task) = Spirc::new(
-                    connect_config,
-                    session.clone(),
-                    player,
-                    mixer,
-                    event_sender.clone(),
-                );
-                self.spirc = Some(spirc);
-                self.spirc_task = Some(spirc_task);
-                self.session = Some(session);
-                self.event_channel = Some(event_receiver);
-
-                progress = true;
+                    progress = true;
+                }
+                Ok(Async::NotReady) => (),
+                Err(error) => {
+                    error!("Could not connect to server: {}", error);
+                    self.connect = Box::new(futures::future::empty());
+                }
             }
 
             if let Async::Ready(Some(())) = self.signal.poll().unwrap() {
@@ -521,12 +521,32 @@ impl Future for Main {
                 progress = true;
             }
 
+            let mut drop_spirc_and_try_to_reconnect = false;
             if let Some(ref mut spirc_task) = self.spirc_task {
                 if let Async::Ready(()) = spirc_task.poll().unwrap() {
                     if self.shutdown {
                         return Ok(Async::Ready(()));
                     } else {
-                        panic!("Spirc shut down unexpectedly");
+                        warn!("Spirc shut down unexpectedly");
+                        drop_spirc_and_try_to_reconnect = true;
+                    }
+                    progress = true;
+                }
+            }
+            if drop_spirc_and_try_to_reconnect {
+                self.spirc_task = None;
+                while (!self.auto_connect_times.is_empty())
+                    && ((Instant::now() - self.auto_connect_times[0]).as_secs() > 600)
+                {
+                    let _ = self.auto_connect_times.remove(0);
+                }
+
+                if let Some(credentials) = self.last_credentials.clone() {
+                    if self.auto_connect_times.len() >= 5 {
+                        warn!("Spirc shut down too often. Not reconnecting automatically.");
+                    } else {
+                        self.auto_connect_times.push(Instant::now());
+                        self.credentials(credentials);
                     }
                 }
             }
