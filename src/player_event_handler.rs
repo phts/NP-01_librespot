@@ -12,7 +12,7 @@ fn run_program(program: &str, env_vars: HashMap<&str, String>) {
         .expect("program failed to start");
 }
 
-pub fn run_program_on_events(event: Event, onevent: &str) {
+pub fn run_program_on_events(event: PlayerEvent, onevent: &str) -> Option<io::Result<Child>> {
     let mut env_vars = HashMap::new();
     match event {
         Event::TrackChanged {
@@ -23,15 +23,15 @@ pub fn run_program_on_events(event: Event, onevent: &str) {
             env_vars.insert("OLD_TRACK_ID", old_track_id.to_base16());
             env_vars.insert("TRACK_ID", track_id.to_base16());
         }
-        Event::PlaybackStarted { track_id } => {
+        PlayerEvent::Started { track_id, .. } => {
             env_vars.insert("PLAYER_EVENT", "start".to_string());
             env_vars.insert("TRACK_ID", track_id.to_base16());
         }
-        Event::PlaybackStopped { track_id } => {
+        PlayerEvent::Stopped { track_id, .. } => {
             env_vars.insert("PLAYER_EVENT", "stop".to_string());
             env_vars.insert("TRACK_ID", track_id.to_base16());
         }
-        _ => (),
+        _ => return None,
     }
-    run_program(onevent, env_vars);
+    Some(run_program(onevent, env_vars))
 }

@@ -11,7 +11,7 @@ extern crate num_bigint;
 extern crate num_traits;
 extern crate tempfile;
 
-extern crate librespot_core as core;
+extern crate librespot_core;
 
 mod decrypt;
 mod fetch;

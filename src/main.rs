@@ -556,7 +556,18 @@ impl Future for Main {
                     Ok(event) => {
                         debug!("Event: {:?}", event);
                         if let Some(ref program) = self.player_event_program {
-                            run_program_on_events(event, program);
+                            if let Some(child) = run_program_on_events(event, program) {
+                                let child = child
+                                    .expect("program failed to start")
+                                    .map(|status| {
+                                        if !status.success() {
+                                            error!("child exited with status {:?}", status.code());
+                                        }
+                                    })
+                                    .map_err(|e| error!("failed to wait on child process: {}", e));
+
+                                self.handle.spawn(child);
+                            }
                         }
                     }
                     Err(TryRecvError::Empty) => (),
