@@ -178,13 +178,13 @@ impl Service for Discovery {
     type ResBody = Body;
     type Error = hyper::Error;
 
-    type Future = Box<dyn Future<Item = Response<(Self::ResBody)>, Error = hyper::Error> + Send>;
-    fn call(&mut self, request: Request<(Self::ReqBody)>) -> Self::Future {
+    type Future = Box<dyn Future<Item = Response<Self::ResBody>, Error = hyper::Error> + Send>;
+    fn call(&mut self, request: Request<Self::ReqBody>) -> Self::Future {
         let mut params = BTreeMap::new();
         trace!("DiscoveryReqest {:?}", request);
         let (parts, body) = request.into_parts();
-        info!("ConnectRequest: {:?} ", parts.headers.get(USER_AGENT).unwrap(),);
-        debug!("ConnectRequest: {:?}", parts.uri.query());
+        debug!("ConnectRequest: {:?} ", parts.headers.get(USER_AGENT).unwrap(),);
+        trace!("ConnectRequest: {:?} ", parts.uri.query());
 
         if let Some(query) = parts.uri.query() {
             params.extend(url::form_urlencoded::parse(query.as_bytes()).into_owned());

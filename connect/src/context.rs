@@ -72,7 +72,7 @@ fn deserialize_protobuf_TrackRef<'de, D>(de: D) -> Result<Vec<TrackRef>, D::Erro
 where
     D: serde::Deserializer<'de>,
 {
-    let v: Vec<TrackContext> = try!(serde::Deserialize::deserialize(de));
+    let v: Vec<TrackContext> = serde::Deserialize::deserialize(de)?;
     let track_vec = v
         .iter()
         .map(|v| {

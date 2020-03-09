@@ -196,7 +196,7 @@ fn compute_keys(shared_secret: &[u8], packets: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<
         data.extend_from_slice(&mac.result().code());
     }
 
-    let mut mac = HmacSha1::new_varkey(&data[..0x14]).expect("HMAC can take key of any size");;
+    let mut mac = HmacSha1::new_varkey(&data[..0x14]).expect("HMAC can take key of any size");
     mac.input(packets);
 
     (

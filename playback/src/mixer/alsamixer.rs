@@ -76,7 +76,7 @@ impl AlsaMixer {
         })
     }
 
-    fn map_volume(&self, set_volume: Option<u16>) -> Result<(u16), Box<dyn Error>> {
+    fn map_volume(&self, set_volume: Option<u16>) -> Result<u16, Box<dyn Error>> {
         let mixer = alsa::mixer::Mixer::new(&self.config.card, false)?;
         let sid = alsa::mixer::SelemId::new(&*self.config.mixer, self.config.index);
 

@@ -26,7 +26,7 @@ fn apresolve(
     let use_proxy = proxy.is_some();
 
     // let mut req = Request::new(url.clone());
-    let mut req = Request::get(url.clone()).body(hyper::Body::from(vec![])).unwrap();;
+    let mut req = Request::get(url.clone()).body(hyper::Body::from(vec![])).unwrap();
     let response = match *proxy {
         Some(ref val) => {
             let proxy_url = Uri::from_str(val.as_str()).expect("invalid http proxy");
