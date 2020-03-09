@@ -45,7 +45,7 @@ struct PlayerInternal {
     sink: Box<dyn Sink>,
     sink_running: bool,
     audio_filter: Option<Box<dyn AudioFilter + Send>>,
-    // event_sender: Option<std::sync::mpsc::Sender<Event>>,
+    event_sender: Option<std::sync::mpsc::Sender<Event>>,
     event_senders: Vec<futures::sync::mpsc::UnboundedSender<PlayerEvent>>,
 }
 
@@ -187,7 +187,7 @@ impl Player {
         F: FnOnce() -> Box<dyn Sink> + Send + 'static,
     {
         let (cmd_tx, cmd_rx) = futures::sync::mpsc::unbounded();
-        let (event_sender, event_receiver) = futures::sync::mpsc::unbounded();
+        let (event_tx, event_receiver) = futures::sync::mpsc::unbounded();
 
         let handle = thread::spawn(move || {
             debug!("new Player[{}]", session.session_id());
@@ -202,8 +202,8 @@ impl Player {
                 sink: sink_builder(),
                 sink_running: false,
                 audio_filter: audio_filter,
-                // event_sender: Some(event_sender),
-                event_senders: [event_sender].to_vec(),
+                event_sender: Some(event_sender),
+                event_senders: [event_tx].to_vec(),
             };
 
             // While PlayerInternal is written as a future, it still contains blocking code.
@@ -834,7 +834,10 @@ impl PlayerInternal {
         if !self.sink_running {
             trace!("== Starting sink ==");
             match self.sink.start() {
-                Ok(()) => self.sink_running = true,
+                Ok(()) => {
+                    self.sink_running = true;
+                    self.send_mevent(Event::SinkActive);
+                }
                 Err(err) => error!("Could not start audio: {}", err),
             }
         }
@@ -844,6 +847,7 @@ impl PlayerInternal {
         if self.sink_running {
             trace!("== Stopping sink ==");
             self.sink.stop().unwrap();
+            self.send_mevent(Event::SinkInactive);
             self.sink_running = false;
         }
     }
@@ -1380,7 +1384,37 @@ impl PlayerInternal {
         }
     }
 
+    // While we figure out a way to coexist with the new PlayerEvents
+    fn send_mevent(&mut self, event: Event) {
+        if let Some(ref event_sender) = self.event_sender {
+            let _ = event_sender.send(event);
+        }
+    }
+
     fn send_event(&mut self, event: PlayerEvent) {
+        use self::PlayerEvent::*;
+        let mevent = match event {
+            Stopped { track_id, .. } | Paused { track_id, .. } => {
+                Some(Event::PlaybackStopped { track_id })
+            }
+            Started { track_id, .. } => Some(Event::PlaybackStarted { track_id }),
+            Changed {
+                old_track_id,
+                new_track_id,
+            } => Some(Event::TrackChanged {
+                old_track_id: old_track_id,
+                track_id: new_track_id,
+            }),
+            Loading { .. }
+            | Playing { .. }
+            | TimeToPreloadNextTrack { .. }
+            | EndOfTrack { .. }
+            | VolumeSet { .. } => None,
+        };
+        if let Some(event) = mevent {
+            self.send_mevent(event);
+        }
+
         let mut index = 0;
         while index < self.event_senders.len() {
             match self.event_senders[index].unbounded_send(event.clone()) {
