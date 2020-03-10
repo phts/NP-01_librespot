@@ -1038,6 +1038,9 @@ impl PlayerInternal {
         play: bool,
         position_ms: u32,
     ) {
+        if !self.config.gapless {
+            self.ensure_sink_stopped();
+        }
         // emit the correct player event
         match self.state {
             PlayerState::Playing {
