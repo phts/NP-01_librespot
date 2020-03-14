@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -15,6 +16,18 @@ impl FromStr for Bitrate {
             "160" => Ok(Bitrate::Bitrate160),
             "320" => Ok(Bitrate::Bitrate320),
             _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<i16> for Bitrate {
+    type Error = &'static str;
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        match value {
+            96 => Ok(Bitrate::Bitrate96),
+            160 => Ok(Bitrate::Bitrate160),
+            320 => Ok(Bitrate::Bitrate320),
+            _ => Err("Unsupported bitrate"),
         }
     }
 }
