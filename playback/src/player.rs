@@ -1408,11 +1408,10 @@ impl PlayerInternal {
                 old_track_id: old_track_id,
                 track_id: new_track_id,
             }),
-            Loading { .. }
-            | Playing { .. }
-            | TimeToPreloadNextTrack { .. }
-            | EndOfTrack { .. }
-            | VolumeSet { .. } => None,
+            Loading { track_id, .. } => Some(Event::PlaybackLoading { track_id }),
+            Playing { .. } | TimeToPreloadNextTrack { .. } | EndOfTrack { .. } | VolumeSet { .. } => {
+                None
+            }
         };
         if let Some(event) = mevent {
             self.send_mevent(event);

@@ -46,6 +46,9 @@ pub enum Event {
     PlaybackStarted {
         track_id: SpotifyId,
     },
+    PlaybackLoading {
+        track_id: SpotifyId,
+    },
     PlaybackStopped {
         track_id: SpotifyId,
     },
