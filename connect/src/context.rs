@@ -26,7 +26,7 @@ pub struct StationContext {
 
 #[derive(Deserialize, Debug)]
 pub struct PageContext {
-    pub uri: String,
+    pub uri: Option<String>,
     pub next_page_url: String,
     #[serde(deserialize_with = "deserialize_protobuf_TrackRef")]
     pub tracks: Vec<TrackRef>,
@@ -64,7 +64,7 @@ pub struct MetadataContext {
     artist_uri: String,
     image_url: String,
     title: String,
-    uid: String,
+    uid: Option<String>,
 }
 
 #[allow(non_snake_case)]
