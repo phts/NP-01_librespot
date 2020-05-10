@@ -103,6 +103,10 @@ pub enum PlayerEvent {
         play_request_id: u64,
         track_id: SpotifyId,
     },
+    Unavailable {
+        play_request_id: u64,
+        track_id: SpotifyId,
+    },
     EndOfTrack {
         play_request_id: u64,
         track_id: SpotifyId,
@@ -117,12 +121,14 @@ impl PlayerEvent {
         use self::PlayerEvent::*;
         match self {
             Loading { play_request_id, .. }
+            | Unavailable { play_request_id, .. }
             | Started { play_request_id, .. }
             | Playing { play_request_id, .. }
             | TimeToPreloadNextTrack { play_request_id, .. }
             | EndOfTrack { play_request_id, .. }
             | Paused { play_request_id, .. }
             | Stopped { play_request_id, .. } => Some(*play_request_id),
+
             Changed { .. } | VolumeSet { .. } => None,
         }
     }
@@ -708,9 +714,7 @@ impl Future for PlayerInternal {
                     }
                     Ok(Async::NotReady) => (),
                     Err(_) => {
-                        warn!("Unable to load <{:?}>", track_id);
-                        warn!("Skipping to next track");
-                        trace!("State: {:?}", self.state);
+                        warn!("Unable to load <{:?}>\nSkipping to next track", track_id);
                         assert!(self.state.is_loading());
                         self.send_event(PlayerEvent::EndOfTrack {
                             track_id,
@@ -735,8 +739,17 @@ impl Future for PlayerInternal {
                     }
                     Ok(Async::NotReady) => (),
                     Err(_) => {
-                        warn!("Unable to preload {:?}", track_id);
+                        debug!("Unable to preload {:?}", track_id);
                         self.preload = PlayerPreload::None;
+                        // Let Spirc know that the track was unavailable.
+                        if let PlayerState::Playing { play_request_id, .. }
+                        | PlayerState::Paused { play_request_id, .. } = self.state
+                        {
+                            self.send_event(PlayerEvent::Unavailable {
+                                track_id,
+                                play_request_id,
+                            });
+                        }
                     }
                 }
             }
@@ -1263,7 +1276,6 @@ impl PlayerInternal {
     fn handle_command_preload(&mut self, track_id: SpotifyId) {
         debug!("Preloading track");
         let mut preload_track = true;
-
         // check whether the track is already loaded somewhere or being loaded.
         if let PlayerPreload::Loading {
             track_id: currently_loading,
@@ -1425,9 +1437,7 @@ impl PlayerInternal {
                 track_id: new_track_id,
             }),
             Loading { track_id, .. } => Some(Event::PlaybackLoading { track_id }),
-            Playing { .. } | TimeToPreloadNextTrack { .. } | EndOfTrack { .. } | VolumeSet { .. } => {
-                None
-            }
+            _ => None,
         };
         if let Some(event) = mevent {
             self.send_mevent(event);
