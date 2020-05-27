@@ -1330,12 +1330,8 @@ impl SpircTask {
 
     fn get_current_track_id(&mut self) -> SpotifyId {
         let index = self.state.get_playing_track_index();
-        let track = {
-            let gid = self.state.get_track()[index as usize].get_gid();
-            SpotifyId::from_raw(gid).unwrap()
-        };
-
-        track
+        self.get_spotify_id_for_track(&self.state.get_track()[index as usize])
+            .unwrap()
     }
 
     fn request_access_token(&mut self, client_id: &str, scopes: &str) {
