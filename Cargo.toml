@@ -7,6 +7,7 @@ description = "Open Source Spotify client library"
 keywords = ["spotify"]
 repository = "https://github.com/plietar/librespot"
 readme = "README.md"
+edition = "2018"
 
 [package.metadata.deb]
 maintainer = "librespot-org"
@@ -85,4 +86,4 @@ with-vorbis = ["librespot-audio/with-vorbis"]
 
 with-dns-sd = ["librespot-connect/with-dns-sd"]
 
-default = ["librespot-playback/portaudio-backend"]
+default = ["librespot-playback/alsa-backend"]
