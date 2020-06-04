@@ -11,11 +11,11 @@ use std::mem;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::config::{Bitrate, PlayerConfig};
 use crate::librespot_core::events::Event;
 use crate::librespot_core::session::Session;
 use crate::librespot_core::spotify_id::SpotifyId;
 use crate::librespot_core::util::SeqGenerator;
-use config::{Bitrate, PlayerConfig};
 
 use crate::audio::{AudioDecrypt, AudioFile, StreamLoaderController};
 use crate::audio::{VorbisDecoder, VorbisPacket};
@@ -23,9 +23,9 @@ use crate::audio::{
     READ_AHEAD_BEFORE_PLAYBACK_ROUNDTRIPS, READ_AHEAD_BEFORE_PLAYBACK_SECONDS,
     READ_AHEAD_DURING_PLAYBACK_ROUNDTRIPS, READ_AHEAD_DURING_PLAYBACK_SECONDS,
 };
-use audio_backend::Sink;
-use metadata::{AudioItem, FileFormat};
-use mixer::AudioFilter;
+use crate::audio_backend::Sink;
+use crate::metadata::{AudioItem, FileFormat};
+use crate::mixer::AudioFilter;
 
 const PRELOAD_NEXT_TRACK_BEFORE_END_DURATION_MS: u32 = 30000;
 
