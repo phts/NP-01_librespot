@@ -9,15 +9,15 @@ use futures::sync::mpsc;
 use futures::{Async, Future, IntoFuture, Poll, Stream};
 use tokio::runtime::{current_thread, current_thread::Handle};
 
-use apresolve::apresolve_or_fallback;
-use audio_key::AudioKeyManager;
-use authentication::Credentials;
-use cache::Cache;
-use channel::ChannelManager;
-use component::Lazy;
-use config::SessionConfig;
-use connection;
-use mercury::MercuryManager;
+use crate::apresolve::apresolve_or_fallback;
+use crate::audio_key::AudioKeyManager;
+use crate::authentication::Credentials;
+use crate::cache::Cache;
+use crate::channel::ChannelManager;
+use crate::component::Lazy;
+use crate::config::SessionConfig;
+use crate::connection;
+use crate::mercury::MercuryManager;
 
 struct SessionData {
     country: String,

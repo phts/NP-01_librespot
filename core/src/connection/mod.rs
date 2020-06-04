@@ -12,10 +12,9 @@ use tokio::net::TcpStream;
 use tokio_codec::Framed;
 use url::Url;
 
-use authentication::Credentials;
-use version;
-
-use proxytunnel;
+use crate::authentication::Credentials;
+use crate::proxytunnel;
+use crate::version;
 
 pub type Transport = Framed<TcpStream, APCodec>;
 

@@ -12,7 +12,7 @@ use std::io::{self, Read, Write};
 use std::ops::FnOnce;
 use std::path::Path;
 
-use protocol::authentication::AuthenticationType;
+use crate::protocol::authentication::AuthenticationType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Credentials {

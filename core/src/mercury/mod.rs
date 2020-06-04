@@ -3,11 +3,11 @@ use bytes::Bytes;
 use futures::sync::{mpsc, oneshot};
 use futures::{Async, Future, Poll};
 use protobuf;
-use protocol;
 use std::collections::HashMap;
 use std::mem;
 
-use util::SeqGenerator;
+use crate::protocol;
+use crate::util::SeqGenerator;
 
 mod types;
 pub use self::types::*;
