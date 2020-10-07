@@ -41,7 +41,8 @@ fn open_device(dev_name: &str) -> Result<PCM, Box<Error>> {
         hwp.set_format(Format::s16())?;
         hwp.set_rate(44100, ValueOr::Nearest)?;
         hwp.set_channels(2)?;
-        hwp.set_buffer_size_near(22050)?; // ~ 0.5s latency
+        hwp.set_buffer_size_near(22052)?; // ~ 0.5s latency
+        hwp.set_period_size_near(5513, ValueOr::Greater)?;
         if env::var("LIBRESPOT_RATE_RESAMPLE").is_ok() {
             debug!("Allowing resampling, and setting period size: 1024");
             hwp.set_rate_resample(true)?;
