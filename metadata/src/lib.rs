@@ -17,6 +17,7 @@ use core::session::Session;
 use core::spotify_id::{FileId, SpotifyAudioType, SpotifyId};
 
 pub use protocol::metadata::AudioFile_Format as FileFormat;
+pub use protocol::metadata::Date as Date;
 
 fn countrylist_contains(list: &str, country: &str) -> bool {
     list.chunks(2).any(|cc| cc == country)
@@ -149,6 +150,7 @@ pub struct Track {
     pub id: SpotifyId,
     pub name: String,
     pub duration: i32,
+    pub number: i32,
     pub album: SpotifyId,
     pub artists: Vec<SpotifyId>,
     pub files: LinearMap<FileFormat, FileId>,
@@ -163,6 +165,7 @@ pub struct Album {
     pub artists: Vec<SpotifyId>,
     pub tracks: Vec<SpotifyId>,
     pub covers: Vec<FileId>,
+    pub date: Date,
 }
 
 #[derive(Debug, Clone)]
@@ -236,6 +239,7 @@ impl Metadata for Track {
                 .map(|alt| SpotifyId::from_raw(alt.get_gid()).unwrap())
                 .collect(),
             available: parse_restrictions(msg.get_restriction(), &country, "premium"),
+            number: msg.get_number(),
         }
     }
 }
@@ -281,6 +285,7 @@ impl Metadata for Album {
             artists: artists,
             tracks: tracks,
             covers: covers,
+            date: msg.get_date().to_owned(),
         }
     }
 }
