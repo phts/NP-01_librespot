@@ -595,7 +595,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "librespot"
+name = "0.1.0-phts-np-01.0"
 version = "0.1.0"
 dependencies = [
  "librespot-audio 0.1.1",
