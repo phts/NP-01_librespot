@@ -7,6 +7,7 @@ Dependency of [NP-01_Vollibrespot] and used by [PHTS NP-01].
 Changes:
 
 - add more values (album release date and track number) to metadata
+- fix JSON parsing errors in some cases
 
 [librespot]: https://github.com/librespot-org/librespot
 [ashthespy/librespot]: https://github.com/ashthespy/librespot/tree/vollibrespot
