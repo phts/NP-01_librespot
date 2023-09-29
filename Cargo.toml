@@ -1,6 +1,6 @@
 [package]
 name = "librespot"
-version = "0.1.0-phts-np-01.1"
+version = "0.1.0-phts-np-01.2"
 authors = ["Paul Liétar <paul@lietar.net>"]
 license = "MIT"
 description = "Open Source Spotify client library"
