@@ -6,7 +6,7 @@ use serde;
 #[derive(Deserialize, Debug)]
 pub struct StationContext {
     pub uri: String,
-    pub next_page_url: String,
+    pub next_page_url: Option<String>,
     #[serde(deserialize_with = "deserialize_protobuf_TrackRef")]
     pub tracks: Vec<TrackRef>,
 
@@ -15,7 +15,6 @@ pub struct StationContext {
     #[serde(rename = "imageUri")]
     pub image_uri: String,
     pub subtitle: Option<String>,
-    pub subtitles: Vec<String>,
     #[serde(rename = "subtitleUri")]
     pub subtitle_uri: Option<String>,
     pub title: String,
